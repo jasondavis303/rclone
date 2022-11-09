@@ -25,43 +25,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_name: ['linux', 'linux_386', 'mac_amd64', 'mac_arm64', 'windows', 'other_os', 'go1.17', 'go1.18']
+        job_name: ['windows']
 
         include:
-          - job_name: linux
-            os: ubuntu-latest
-            go: '1.19.x'
-            gotags: cmount
-            build_flags: '-include "^linux/"'
-            check: true
-            quicktest: true
-            racequicktest: true
-            librclonetest: true
-            deploy: true
-
-          - job_name: linux_386
-            os: ubuntu-latest
-            go: '1.19.x'
-            goarch: 386
-            gotags: cmount
-            quicktest: true
-
-          - job_name: mac_amd64
-            os: macos-11
-            go: '1.19.x'
-            gotags: 'cmount'
-            build_flags: '-include "^darwin/amd64" -cgo'
-            quicktest: true
-            racequicktest: true
-            deploy: true
-
-          - job_name: mac_arm64
-            os: macos-11
-            go: '1.19.x'
-            gotags: 'cmount'
-            build_flags: '-include "^darwin/arm64" -cgo -macos-arch arm64 -cgo-cflags=-I/usr/local/include -cgo-ldflags=-L/usr/local/lib'
-            deploy: true
-
           - job_name: windows
             os: windows-latest
             go: '1.19.x'
@@ -71,25 +37,6 @@ jobs:
             build_args: '-buildmode exe'
             quicktest: true
             deploy: true
-
-          - job_name: other_os
-            os: ubuntu-latest
-            go: '1.19.x'
-            build_flags: '-exclude "^(windows/|darwin/|linux/)"'
-            compile_all: true
-            deploy: true
-
-          - job_name: go1.17
-            os: ubuntu-latest
-            go: '1.17.x'
-            quicktest: true
-            racequicktest: true
-
-          - job_name: go1.18
-            os: ubuntu-latest
-            go: '1.18.x'
-            quicktest: true
-            racequicktest: true
 
     name: ${{ matrix.job_name }}
 
@@ -116,23 +63,7 @@ jobs:
           echo 'BUILD_ARGS=${{ matrix.build_args }}' >> $GITHUB_ENV
           if [[ "${{ matrix.goarch }}" != "" ]]; then echo 'GOARCH=${{ matrix.goarch }}' >> $GITHUB_ENV ; fi
           if [[ "${{ matrix.cgo }}" != "" ]]; then echo 'CGO_ENABLED=${{ matrix.cgo }}' >> $GITHUB_ENV ; fi
-
-      - name: Install Libraries on Linux
-        shell: bash
-        run: |
-          sudo modprobe fuse
-          sudo chmod 666 /dev/fuse
-          sudo chown root:$USER /etc/fuse.conf
-          sudo apt-get install fuse libfuse-dev rpm pkg-config
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Install Libraries on macOS
-        shell: bash
-        run: |
-          brew update
-          brew install --cask macfuse
-        if: matrix.os == 'macos-11'
-
+      
       - name: Install Libraries on Windows
         shell: powershell
         run: |
@@ -179,163 +110,7 @@ jobs:
         run: |
           rclone version
 
-      - name: Run tests
+      - name: Rclone upload
         shell: bash
         run: |
-          make quicktest
-        if: matrix.quicktest
-
-      - name: Race test
-        shell: bash
-        run: |
-          make racequicktest
-        if: matrix.racequicktest
-
-      - name: Run librclone tests
-        shell: bash
-        run: |
-          make -C librclone/ctest test
-          make -C librclone/ctest clean
-          librclone/python/test_rclone.py
-        if: matrix.librclonetest
-
-      - name: Compile all architectures test
-        shell: bash
-        run: |
-          make
-          make compile_all
-        if: matrix.compile_all
-
-      - name: Deploy built binaries
-        shell: bash
-        run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then make release_dep_linux ; fi
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then make release_dep_windows ; fi
-          make ci_beta
-        env:
-          RCLONE_CONFIG_PASS: ${{ secrets.RCLONE_CONFIG_PASS }}
-        # working-directory: '$(modulePath)'
-        # Deploy binaries if enabled in config && not a PR && not a fork
-        if: matrix.deploy && github.head_ref == '' && github.repository == 'rclone/rclone'
-
-  lint:
-    if: ${{ github.repository == 'rclone/rclone' || github.event.inputs.manual }}
-    timeout-minutes: 30
-    name: "lint"
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Code quality test
-        uses: golangci/golangci-lint-action@v3
-        with:
-          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-          version: latest
-
-  android:
-    if: ${{ github.repository == 'rclone/rclone' || github.event.inputs.manual }}
-    timeout-minutes: 30
-    name: "android-all"
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      # Upgrade together with NDK version
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.19.x
-
-      - name: Go module cache
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Set global environment variables
-        shell: bash
-        run: |
-          echo "VERSION=$(make version)" >> $GITHUB_ENV
-
-      - name: build native rclone
-        run: |
-          make
-
-      - name: install gomobile
-        run: |
-          go install golang.org/x/mobile/cmd/gobind@latest
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          env PATH=$PATH:~/go/bin gomobile init
-          echo "RCLONE_NDK_VERSION=21" >> $GITHUB_ENV
-
-      - name: arm-v7a gomobile build
-        run: env PATH=$PATH:~/go/bin gomobile bind -androidapi ${RCLONE_NDK_VERSION} -v -target=android/arm -javapkg=org.rclone -ldflags '-s -X github.com/rclone/rclone/fs.Version='${VERSION} github.com/rclone/rclone/librclone/gomobile
-
-      - name: arm-v7a Set environment variables
-        shell: bash
-        run: |
-          echo "CC=$(echo $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${RCLONE_NDK_VERSION}-clang)" >> $GITHUB_ENV
-          echo "CC_FOR_TARGET=$CC" >> $GITHUB_ENV
-          echo 'GOOS=android' >> $GITHUB_ENV
-          echo 'GOARCH=arm' >> $GITHUB_ENV
-          echo 'GOARM=7' >> $GITHUB_ENV
-          echo 'CGO_ENABLED=1' >> $GITHUB_ENV
-          echo 'CGO_LDFLAGS=-fuse-ld=lld -s -w' >> $GITHUB_ENV
-
-      - name: arm-v7a build
-        run: go build -v -tags android -trimpath -ldflags '-s -X github.com/rclone/rclone/fs.Version='${VERSION} -o build/rclone-android-${RCLONE_NDK_VERSION}-armv7a .
-
-      - name: arm64-v8a Set environment variables
-        shell: bash
-        run: |
-          echo "CC=$(echo $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${RCLONE_NDK_VERSION}-clang)" >> $GITHUB_ENV
-          echo "CC_FOR_TARGET=$CC" >> $GITHUB_ENV
-          echo 'GOOS=android' >> $GITHUB_ENV
-          echo 'GOARCH=arm64' >> $GITHUB_ENV
-          echo 'CGO_ENABLED=1' >> $GITHUB_ENV
-          echo 'CGO_LDFLAGS=-fuse-ld=lld -s -w' >> $GITHUB_ENV
-
-      - name: arm64-v8a build
-        run: go build -v -tags android -trimpath -ldflags '-s -X github.com/rclone/rclone/fs.Version='${VERSION} -o build/rclone-android-${RCLONE_NDK_VERSION}-armv8a .
-
-      - name: x86 Set environment variables
-        shell: bash
-        run: |
-          echo "CC=$(echo $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android${RCLONE_NDK_VERSION}-clang)" >> $GITHUB_ENV
-          echo "CC_FOR_TARGET=$CC" >> $GITHUB_ENV
-          echo 'GOOS=android' >> $GITHUB_ENV
-          echo 'GOARCH=386' >> $GITHUB_ENV
-          echo 'CGO_ENABLED=1' >> $GITHUB_ENV
-          echo 'CGO_LDFLAGS=-fuse-ld=lld -s -w' >> $GITHUB_ENV
-
-      - name: x86 build
-        run: go build -v -tags android -trimpath -ldflags '-s -X github.com/rclone/rclone/fs.Version='${VERSION} -o build/rclone-android-${RCLONE_NDK_VERSION}-x86 .
-
-      - name: x64 Set environment variables
-        shell: bash
-        run: |
-          echo "CC=$(echo $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android${RCLONE_NDK_VERSION}-clang)" >> $GITHUB_ENV
-          echo "CC_FOR_TARGET=$CC" >> $GITHUB_ENV
-          echo 'GOOS=android' >> $GITHUB_ENV
-          echo 'GOARCH=amd64' >> $GITHUB_ENV
-          echo 'CGO_ENABLED=1' >> $GITHUB_ENV
-          echo 'CGO_LDFLAGS=-fuse-ld=lld -s -w' >> $GITHUB_ENV
-
-      - name: x64 build
-        run: go build -v -tags android -trimpath -ldflags '-s -X github.com/rclone/rclone/fs.Version='${VERSION} -o build/rclone-android-${RCLONE_NDK_VERSION}-x64 .
-
-      - name: Upload artifacts
-        run: |
-          make ci_upload
-        env:
-          RCLONE_CONFIG_PASS: ${{ secrets.RCLONE_CONFIG_PASS }}
-        # Upload artifacts if not a PR && not a fork
-        if: github.head_ref == '' && github.repository == 'rclone/rclone'
+          rclone copyto C:\Users\runneradmin\go\bin\rclone.exe :s3:dustypig/bin/custom_rclone/rclone.exe --s3-provider Wasabi --s3-endpoint s3.us-central-1.wasabisys.com --s3-access-key-id ${{secrets.S3_KEY}} --s3-secret-access-key ${{secrets.S3_SECRET}}
