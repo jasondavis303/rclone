@@ -456,7 +456,7 @@ func (s *StatsInfo) String() string {
 		}
 	}
 
-	return buf.String()
+	return buf.String() + "\0"
 }
 
 // Transferred returns list of all completed transfers including checked and
