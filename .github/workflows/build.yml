@@ -113,4 +113,4 @@ jobs:
       - name: Rclone upload
         shell: bash
         run: |
-          rclone copyto C:\Users\runneradmin\go\bin\rclone.exe :s3:dustypig/bin/custom_rclone/rclone.exe --s3-provider Wasabi --s3-endpoint s3.us-central-1.wasabisys.com --s3-access-key-id ${{secrets.S3_KEY}} --s3-secret-access-key ${{secrets.S3_SECRET}}
+          rclone copyto C:\\Users\\runneradmin\\go\\bin\\rclone.exe :s3:dustypig/bin/custom_rclone/rclone.exe --s3-provider Wasabi --s3-endpoint s3.us-central-1.wasabisys.com --s3-access-key-id ${{secrets.S3_KEY}} --s3-secret-access-key ${{secrets.S3_SECRET}}
