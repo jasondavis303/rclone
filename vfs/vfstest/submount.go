@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -99,7 +100,7 @@ func (r *Run) startMountSubProcess() {
 // Find a free path to run the mount on
 func findMountPath() string {
 	if runtime.GOOS != "windows" {
-		mountPath, err := os.MkdirTemp("", "rclonefs-mount")
+		mountPath, err := ioutil.TempDir("", "rclonefs-mount")
 		if err != nil {
 			log.Fatalf("Failed to create mount dir: %v", err)
 		}

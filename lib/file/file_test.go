@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
@@ -15,7 +16,7 @@ import (
 // This lists dir and checks the listing is as expected without checking the size
 func checkListingNoSize(t *testing.T, dir string, want []string) {
 	var got []string
-	nodes, err := os.ReadDir(dir)
+	nodes, err := ioutil.ReadDir(dir)
 	require.NoError(t, err)
 	for _, node := range nodes {
 		got = append(got, fmt.Sprintf("%s,%v", node.Name(), node.IsDir()))
@@ -26,12 +27,10 @@ func checkListingNoSize(t *testing.T, dir string, want []string) {
 // This lists dir and checks the listing is as expected
 func checkListing(t *testing.T, dir string, want []string) {
 	var got []string
-	nodes, err := os.ReadDir(dir)
+	nodes, err := ioutil.ReadDir(dir)
 	require.NoError(t, err)
 	for _, node := range nodes {
-		info, err := node.Info()
-		assert.NoError(t, err)
-		got = append(got, fmt.Sprintf("%s,%d,%v", node.Name(), info.Size(), node.IsDir()))
+		got = append(got, fmt.Sprintf("%s,%d,%v", node.Name(), node.Size(), node.IsDir()))
 	}
 	assert.Equal(t, want, got)
 }

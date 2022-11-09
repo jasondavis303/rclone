@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -500,7 +501,7 @@ func (f *Fs) put(ctx context.Context, in io.Reader, src fs.ObjectInfo, stream bo
 			errs[i] = fmt.Errorf("%s: %w", u.Name(), err)
 			if len(upstreams) > 1 {
 				// Drain the input buffer to allow other uploads to continue
-				_, _ = io.Copy(io.Discard, readers[i])
+				_, _ = io.Copy(ioutil.Discard, readers[i])
 			}
 			return
 		}

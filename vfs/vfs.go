@@ -23,7 +23,7 @@ package vfs
 import (
 	"context"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -697,7 +697,7 @@ func (vfs *VFS) ReadFile(filename string) (b []byte, err error) {
 		return nil, err
 	}
 	defer fs.CheckClose(f, &err)
-	return io.ReadAll(f)
+	return ioutil.ReadAll(f)
 }
 
 // AddVirtual adds the object (file or dir) to the directory cache

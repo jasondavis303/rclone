@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -43,7 +44,7 @@ func NewClient(c *http.Client) *Client {
 // ReadBody reads resp.Body into result, closing the body
 func ReadBody(resp *http.Response) (result []byte, err error) {
 	defer fs.CheckClose(resp.Body, &err)
-	return io.ReadAll(resp.Body)
+	return ioutil.ReadAll(resp.Body)
 }
 
 // defaultErrorHandler doesn't attempt to parse the http body, just

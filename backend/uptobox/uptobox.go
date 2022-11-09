@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -238,7 +239,7 @@ func NewFs(ctx context.Context, name string, root string, config configmap.Mappe
 func (f *Fs) decodeError(resp *http.Response, response interface{}) (err error) {
 	defer fs.CheckClose(resp.Body, &err)
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

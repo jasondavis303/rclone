@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path"
 	"strings"
 	"sync"
@@ -574,7 +575,7 @@ func (o *Object) Open(ctx context.Context, options ...fs.OpenOption) (in io.Read
 		}
 		data = data[:limit]
 	}
-	return io.NopCloser(bytes.NewBuffer(data)), nil
+	return ioutil.NopCloser(bytes.NewBuffer(data)), nil
 }
 
 // Update the object with the contents of the io.Reader, modTime and size
@@ -582,7 +583,7 @@ func (o *Object) Open(ctx context.Context, options ...fs.OpenOption) (in io.Read
 // The new object may have been created if an error is returned
 func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, options ...fs.OpenOption) (err error) {
 	bucket, bucketPath := o.split()
-	data, err := io.ReadAll(in)
+	data, err := ioutil.ReadAll(in)
 	if err != nil {
 		return fmt.Errorf("failed to update memory object: %w", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -302,7 +303,7 @@ func (b *bisyncTest) runTestCase(ctx context.Context, t *testing.T, testCase str
 
 	// Execute test scenario
 	scenFile := filepath.Join(b.testDir, "scenario.txt")
-	scenBuf, err := os.ReadFile(scenFile)
+	scenBuf, err := ioutil.ReadFile(scenFile)
 	scenReplacer := b.newReplacer(false)
 	require.NoError(b.t, err)
 	b.step = 0
@@ -902,8 +903,8 @@ func (b *bisyncTest) compareResults() int {
 			// save mangled logs so difference is easier on eyes
 			goldenFile := filepath.Join(b.logDir, "mangled.golden.log")
 			resultFile := filepath.Join(b.logDir, "mangled.result.log")
-			require.NoError(b.t, os.WriteFile(goldenFile, []byte(goldenText), bilib.PermSecure))
-			require.NoError(b.t, os.WriteFile(resultFile, []byte(resultText), bilib.PermSecure))
+			require.NoError(b.t, ioutil.WriteFile(goldenFile, []byte(goldenText), bilib.PermSecure))
+			require.NoError(b.t, ioutil.WriteFile(resultFile, []byte(resultText), bilib.PermSecure))
 		}
 
 		if goldenText == resultText {
@@ -973,7 +974,7 @@ func (b *bisyncTest) storeGolden() {
 
 		goldName := b.toGolden(fileName)
 		goldPath := filepath.Join(b.goldenDir, goldName)
-		err := os.WriteFile(goldPath, []byte(text), bilib.PermSecure)
+		err := ioutil.WriteFile(goldPath, []byte(text), bilib.PermSecure)
 		assert.NoError(b.t, err, "writing golden file %s", goldName)
 
 		if goldName != fileName {
@@ -985,7 +986,7 @@ func (b *bisyncTest) storeGolden() {
 
 // mangleResult prepares test logs or listings for comparison
 func (b *bisyncTest) mangleResult(dir, file string, golden bool) string {
-	buf, err := os.ReadFile(filepath.Join(dir, file))
+	buf, err := ioutil.ReadFile(filepath.Join(dir, file))
 	require.NoError(b.t, err)
 	text := string(buf)
 
@@ -1204,7 +1205,7 @@ func (b *bisyncTest) ensureDir(parent, dir string, optional bool) string {
 }
 
 func (b *bisyncTest) listDir(dir string) (names []string) {
-	files, err := os.ReadDir(dir)
+	files, err := ioutil.ReadDir(dir)
 	require.NoError(b.t, err)
 	for _, file := range files {
 		names = append(names, filepath.Base(file.Name()))

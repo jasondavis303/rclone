@@ -650,12 +650,3 @@ put them back in again.` >}}
   * Manoj Ghosh <manoj.ghosh@oracle.com>
   * Tom Mombourquette <tom@devnode.com>
   * Robert Newson <rnewson@apache.org>
-  * Samuel Johnson <esamueljohnson@gmail.com>
-  * coultonluke <luke@luke.org.uk>
-  * Anthony Pessy <anthony@cogniteev.com>
-  * Philip Harvey <pharvey@battelleecology.org>
-  * dgouju <dgouju@users.noreply.github.com>
-  * Clément Notin <clement.notin@gmail.com>
-  * x3-apptech <66947598+x3-apptech@users.noreply.github.com>
-  * Arnie97 <arnie97@gmail.com>
-  * Roel Arents <2691308+roelarents@users.noreply.github.com>

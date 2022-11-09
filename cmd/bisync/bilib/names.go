@@ -2,7 +2,7 @@ package bilib
 
 import (
 	"bytes"
-	"os"
+	"io/ioutil"
 	"sort"
 	"strconv"
 )
@@ -57,5 +57,5 @@ func SaveList(list []string, path string) error {
 		_, _ = buf.WriteString(strconv.Quote(s))
 		_ = buf.WriteByte('\n')
 	}
-	return os.WriteFile(path, buf.Bytes(), PermSecure)
+	return ioutil.WriteFile(path, buf.Bytes(), PermSecure)
 }

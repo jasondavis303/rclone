@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -111,7 +112,7 @@ func (p *Plugins) readFromFile() (err error) {
 	availablePluginsJSON := filepath.Join(pluginsConfigPath, p.fileName)
 	_, err = os.Stat(availablePluginsJSON)
 	if err == nil {
-		data, err := os.ReadFile(availablePluginsJSON)
+		data, err := ioutil.ReadFile(availablePluginsJSON)
 		if err != nil {
 			return err
 		}
@@ -133,7 +134,7 @@ func (p *Plugins) readFromFile() (err error) {
 func (p *Plugins) addPlugin(pluginName string, packageJSONPath string) (err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	data, err := os.ReadFile(packageJSONPath)
+	data, err := ioutil.ReadFile(packageJSONPath)
 	if err != nil {
 		return err
 	}
@@ -186,7 +187,7 @@ func (p *Plugins) writeToFile() (err error) {
 	if err != nil {
 		fs.Logf(nil, "%s", err)
 	}
-	err = os.WriteFile(availablePluginsJSON, file, 0755)
+	err = ioutil.WriteFile(availablePluginsJSON, file, 0755)
 	if err != nil {
 		fs.Logf(nil, "%s", err)
 	}

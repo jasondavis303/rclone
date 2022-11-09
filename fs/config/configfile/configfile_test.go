@@ -2,6 +2,7 @@ package configfile
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -29,7 +30,7 @@ fruit = banana
 
 // Fill up a temporary config file with the testdata filename passed in
 func setConfigFile(t *testing.T, data string) func() {
-	out, err := os.CreateTemp("", "rclone-configfile-test")
+	out, err := ioutil.TempFile("", "rclone-configfile-test")
 	require.NoError(t, err)
 	filePath := out.Name()
 
@@ -159,7 +160,7 @@ type = number3
 `, toUnix(buf))
 					t.Run("Save", func(t *testing.T) {
 						require.NoError(t, data.Save())
-						buf, err := os.ReadFile(config.GetConfigPath())
+						buf, err := ioutil.ReadFile(config.GetConfigPath())
 						require.NoError(t, err)
 						assert.Equal(t, `[one]
 fruit = potato

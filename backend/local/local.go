@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -123,8 +124,8 @@ routine so this flag shouldn't normally be used.`,
 			Help: `Don't check to see if the files change during upload.
 
 Normally rclone checks the size and modification time of files as they
-are being uploaded and aborts with a message which starts "can't copy -
-source file is being updated" if the file changes during upload.
+are being uploaded and aborts with a message which starts "can't copy
+- source file is being updated" if the file changes during upload.
 
 However on some file systems this modification time check may fail (e.g.
 [Glusterfs #2206](https://github.com/rclone/rclone/issues/2206)) so this
@@ -645,7 +646,7 @@ func (f *Fs) readPrecision() (precision time.Duration) {
 	precision = time.Second
 
 	// Create temporary file and test it
-	fd, err := os.CreateTemp("", "rclone")
+	fd, err := ioutil.TempFile("", "rclone")
 	if err != nil {
 		// If failed return 1s
 		// fmt.Println("Failed to create temp file", err)
@@ -1072,7 +1073,7 @@ func (o *Object) openTranslatedLink(offset, limit int64) (lrc io.ReadCloser, err
 	if err != nil {
 		return nil, err
 	}
-	return readers.NewLimitedReadCloser(io.NopCloser(strings.NewReader(linkdst[offset:])), limit), nil
+	return readers.NewLimitedReadCloser(ioutil.NopCloser(strings.NewReader(linkdst[offset:])), limit), nil
 }
 
 // Open an object for read
@@ -1399,26 +1400,29 @@ func (o *Object) writeMetadata(metadata fs.Metadata) (err error) {
 }
 
 func cleanRootPath(s string, noUNC bool, enc encoder.MultiEncoder) string {
-	if runtime.GOOS != "windows" || !strings.HasPrefix(s, "\\") {
-		if !filepath.IsAbs(s) {
+	if runtime.GOOS == "windows" {
+		if !filepath.IsAbs(s) && !strings.HasPrefix(s, "\\") {
 			s2, err := filepath.Abs(s)
 			if err == nil {
 				s = s2
 			}
-		} else {
-			s = filepath.Clean(s)
 		}
-	}
-	if runtime.GOOS == "windows" {
 		s = filepath.ToSlash(s)
 		vol := filepath.VolumeName(s)
 		s = vol + enc.FromStandardPath(s[len(vol):])
 		s = filepath.FromSlash(s)
+
 		if !noUNC {
 			// Convert to UNC
 			s = file.UNCPath(s)
 		}
 		return s
+	}
+	if !filepath.IsAbs(s) {
+		s2, err := filepath.Abs(s)
+		if err == nil {
+			s = s2
+		}
 	}
 	s = enc.FromStandardPath(s)
 	return s

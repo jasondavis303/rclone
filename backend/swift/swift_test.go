@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/ncw/swift/v2"
@@ -135,7 +136,7 @@ func (f *Fs) testWithChunkFail(t *testing.T) {
 	buf := bytes.NewBufferString(contents[:errPosition])
 	errMessage := "potato"
 	er := &readers.ErrorReader{Err: errors.New(errMessage)}
-	in := io.NopCloser(io.MultiReader(buf, er))
+	in := ioutil.NopCloser(io.MultiReader(buf, er))
 
 	file.Size = contentSize
 	obji := object.NewStaticObjectInfo(file.Path, file.ModTime, file.Size, true, nil, nil)

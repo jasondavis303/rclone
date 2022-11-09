@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"sync"
@@ -41,7 +42,7 @@ func checkObject(t *testing.T, r *fstest.Run, remote string, contents string) {
 	require.NoError(t, err)
 	in, err := obj.Open(context.Background())
 	require.NoError(t, err)
-	buf, err := io.ReadAll(in)
+	buf, err := ioutil.ReadAll(in)
 	require.NoError(t, err)
 	require.NoError(t, in.Close())
 	assert.Equal(t, contents, string(buf))

@@ -1,6 +1,7 @@
 package version
 
 import (
+	"io/ioutil"
 	"os"
 	"runtime"
 	"testing"
@@ -12,7 +13,7 @@ import (
 
 func TestVersionWorksWithoutAccessibleConfigFile(t *testing.T) {
 	// create temp config file
-	tempFile, err := os.CreateTemp("", "unreadable_config.conf")
+	tempFile, err := ioutil.TempFile("", "unreadable_config.conf")
 	assert.NoError(t, err)
 	path := tempFile.Name()
 	defer func() {

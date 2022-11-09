@@ -89,12 +89,11 @@ func helpText() (tr []string) {
 		" ↑,↓ or k,j to Move",
 		" →,l to enter",
 		" ←,h to return",
-		" g toggle graph",
 		" c toggle counts",
+		" g toggle graph",
 		" a toggle average size in directory",
-		" m toggle modified time",
 		" u toggle human-readable format",
-		" n,s,C,A,M sort by name,size,count,asize,mtime",
+		" n,s,C,A sort by name,size,count,average size",
 		" d delete file/directory",
 		" v select file/directory",
 		" V enter visual select mode",
@@ -132,14 +131,12 @@ type UI struct {
 	showGraph          bool          // toggle showing graph
 	showCounts         bool          // toggle showing counts
 	showDirAverageSize bool          // toggle average size
-	showModTime        bool          // toggle showing timestamps
 	humanReadable      bool          // toggle human-readable format
 	visualSelectMode   bool          // toggle visual selection mode
-	sortByName         int8          // +1 for normal (lexical), 0 for off, -1 for reverse
-	sortBySize         int8          // +1 for normal (largest first), 0 for off, -1 for reverse (smallest first)
+	sortByName         int8          // +1 for normal, 0 for off, -1 for reverse
+	sortBySize         int8
 	sortByCount        int8
 	sortByAverageSize  int8
-	sortByModTime      int8              // +1 for normal (newest first), 0 for off, -1 for reverse (oldest first)
 	dirPosMap          map[string]dirPos // store for directory positions
 	selectedEntries    map[string]dirPos // selected entries of current directory
 }
@@ -335,7 +332,6 @@ func (u *UI) hasEmptyDir() bool {
 
 // Draw the current screen
 func (u *UI) Draw() error {
-	ctx := context.Background()
 	w, h := termbox.Size()
 	u.dirListHeight = h - 3
 
@@ -369,13 +365,7 @@ func (u *UI) Draw() error {
 			if y >= h-1 {
 				break
 			}
-			var attrs scan.Attrs
-			var err error
-			if u.showModTime {
-				attrs, err = u.d.AttrWithModTimeI(ctx, u.sortPerm[n])
-			} else {
-				attrs, err = u.d.AttrI(u.sortPerm[n])
-			}
+			attrs, err := u.d.AttrI(u.sortPerm[n])
 			_, isSelected := u.selectedEntries[entry.String()]
 			fg := termbox.ColorWhite
 			if attrs.EntriesHaveErrors {
@@ -430,9 +420,6 @@ func (u *UI) Draw() error {
 				} else {
 					extras += strings.Repeat(" ", len(ss))
 				}
-			}
-			if u.showModTime {
-				extras += attrs.ModTime.Local().Format("2006-01-02 15:04:05") + " "
 			}
 			if showEmptyDir {
 				if attrs.IsDir && attrs.Count == 0 && fileFlag == ' ' {
@@ -669,15 +656,8 @@ type ncduSort struct {
 // Less is part of sort.Interface.
 func (ds *ncduSort) Less(i, j int) bool {
 	var iAvgSize, jAvgSize float64
-	var iattrs, jattrs scan.Attrs
-	if ds.u.sortByModTime != 0 {
-		ctx := context.Background()
-		iattrs, _ = ds.d.AttrWithModTimeI(ctx, ds.sortPerm[i])
-		jattrs, _ = ds.d.AttrWithModTimeI(ctx, ds.sortPerm[j])
-	} else {
-		iattrs, _ = ds.d.AttrI(ds.sortPerm[i])
-		jattrs, _ = ds.d.AttrI(ds.sortPerm[j])
-	}
+	iattrs, _ := ds.d.AttrI(ds.sortPerm[i])
+	jattrs, _ := ds.d.AttrI(ds.sortPerm[j])
 	iname, jname := ds.entries[ds.sortPerm[i]].Remote(), ds.entries[ds.sortPerm[j]].Remote()
 	if iattrs.Count > 0 {
 		iAvgSize = iattrs.AverageSize()
@@ -699,14 +679,6 @@ func (ds *ncduSort) Less(i, j int) bool {
 		if iattrs.Size != jattrs.Size {
 			return iattrs.Size > jattrs.Size
 		}
-	case ds.u.sortByModTime < 0:
-		if iattrs.ModTime != jattrs.ModTime {
-			return iattrs.ModTime.Before(jattrs.ModTime)
-		}
-	case ds.u.sortByModTime > 0:
-		if iattrs.ModTime != jattrs.ModTime {
-			return iattrs.ModTime.After(jattrs.ModTime)
-		}
 	case ds.u.sortByCount < 0:
 		if iattrs.Count != jattrs.Count {
 			return iattrs.Count < jattrs.Count
@@ -720,17 +692,13 @@ func (ds *ncduSort) Less(i, j int) bool {
 			return iAvgSize < jAvgSize
 		}
 		// if avgSize is equal, sort by size
-		if iattrs.Size != jattrs.Size {
-			return iattrs.Size < jattrs.Size
-		}
+		return iattrs.Size < jattrs.Size
 	case ds.u.sortByAverageSize > 0:
 		if iAvgSize != jAvgSize {
 			return iAvgSize > jAvgSize
 		}
 		// if avgSize is equal, sort by size
-		if iattrs.Size != jattrs.Size {
-			return iattrs.Size > jattrs.Size
-		}
+		return iattrs.Size > jattrs.Size
 	}
 	// if everything equal, sort by name
 	return iname < jname
@@ -875,9 +843,8 @@ func NewUI(f fs.Fs) *UI {
 		showCounts:         false,
 		showDirAverageSize: false,
 		humanReadable:      true,
-		sortByName:         0,
-		sortBySize:         1, // Sort by largest first
-		sortByModTime:      0,
+		sortByName:         0, // +1 for normal, 0 for off, -1 for reverse
+		sortBySize:         1,
 		sortByCount:        0,
 		dirPosMap:          make(map[string]dirPos),
 		selectedEntries:    make(map[string]dirPos),
@@ -966,8 +933,6 @@ outer:
 					u.enter()
 				case 'c':
 					u.showCounts = !u.showCounts
-				case 'm':
-					u.showModTime = !u.showModTime
 				case 'g':
 					u.showGraph = !u.showGraph
 				case 'a':
@@ -976,8 +941,6 @@ outer:
 					u.toggleSort(&u.sortByName)
 				case 's':
 					u.toggleSort(&u.sortBySize)
-				case 'M':
-					u.toggleSort(&u.sortByModTime)
 				case 'v':
 					u.toggleSelectForCursor()
 				case 'V':

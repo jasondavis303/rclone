@@ -18,6 +18,7 @@ import (
 
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -90,13 +91,8 @@ func init() {
 			Help:     "User name (usually email).",
 			Required: true,
 		}, {
-			Name: "pass",
-			Help: `Password.
-
-This must be an app password - rclone will not work with your normal
-password. See the Configuration section in the docs for how to make an
-app password.
-`,
+			Name:       "pass",
+			Help:       "Password.",
 			Required:   true,
 			IsPassword: true,
 		}, {
@@ -1664,7 +1660,7 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
 
 	// Attempt to put by calculating hash in memory
 	if trySpeedup && size <= int64(o.fs.opt.SpeedupMaxMem) {
-		fileBuf, err = io.ReadAll(in)
+		fileBuf, err = ioutil.ReadAll(in)
 		if err != nil {
 			return err
 		}
@@ -1707,7 +1703,7 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
 	if size <= mrhash.Size {
 		// Optimize upload: skip extra request if data fits in the hash buffer.
 		if fileBuf == nil {
-			fileBuf, err = io.ReadAll(wrapIn)
+			fileBuf, err = ioutil.ReadAll(wrapIn)
 		}
 		if fileHash == nil && err == nil {
 			fileHash = mrhash.Sum(fileBuf)
@@ -2218,7 +2214,7 @@ func (o *Object) Open(ctx context.Context, options ...fs.OpenOption) (in io.Read
 		fs.Debugf(o, "Server returned full content instead of range")
 		if start > 0 {
 			// Discard the beginning of the data
-			_, err = io.CopyN(io.Discard, wrapStream, start)
+			_, err = io.CopyN(ioutil.Discard, wrapStream, start)
 			if err != nil {
 				closeBody(res)
 				return nil, err

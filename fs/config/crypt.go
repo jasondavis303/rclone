@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -127,7 +128,7 @@ func Decrypt(b io.ReadSeeker) (io.Reader, error) {
 
 	// Encrypted content is base64 encoded.
 	dec := base64.NewDecoder(base64.StdEncoding, r)
-	box, err := io.ReadAll(dec)
+	box, err := ioutil.ReadAll(dec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load base64 encoded data: %w", err)
 	}
@@ -139,7 +140,7 @@ func Decrypt(b io.ReadSeeker) (io.Reader, error) {
 	for {
 		if envKeyFile := os.Getenv("_RCLONE_CONFIG_KEY_FILE"); len(envKeyFile) > 0 {
 			fs.Debugf(nil, "attempting to obtain configKey from temp file %s", envKeyFile)
-			obscuredKey, err := os.ReadFile(envKeyFile)
+			obscuredKey, err := ioutil.ReadFile(envKeyFile)
 			if err != nil {
 				errRemove := os.Remove(envKeyFile)
 				if errRemove != nil {
@@ -211,7 +212,7 @@ func Encrypt(src io.Reader, dst io.Writer) error {
 	var key [32]byte
 	copy(key[:], configKey[:32])
 
-	data, err := io.ReadAll(src)
+	data, err := ioutil.ReadAll(src)
 	if err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func SetConfigPassword(password string) error {
 	}
 	configKey = sha.Sum(nil)
 	if PassConfigKeyForDaemonization {
-		tempFile, err := os.CreateTemp("", "rclone")
+		tempFile, err := ioutil.TempFile("", "rclone")
 		if err != nil {
 			return fmt.Errorf("cannot create temp file to store configKey: %w", err)
 		}

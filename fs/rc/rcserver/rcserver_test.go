@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -76,7 +77,7 @@ func TestRcServer(t *testing.T) {
 	}
 
 	require.NoError(t, err)
-	body, err := io.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	_ = resp.Body.Close()
 
 	require.NoError(t, err)
@@ -131,7 +132,7 @@ func testServer(t *testing.T, tests []testRun, opt *rc.Options) {
 			resp := w.Result()
 
 			assert.Equal(t, test.Status, resp.StatusCode)
-			body, err := io.ReadAll(resp.Body)
+			body, err := ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
 
 			if test.Contains == nil {

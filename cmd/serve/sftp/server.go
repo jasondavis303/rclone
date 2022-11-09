@@ -17,6 +17,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -310,7 +311,7 @@ func (s *server) Close() {
 }
 
 func loadPrivateKey(keyPath string) (ssh.Signer, error) {
-	privateBytes, err := os.ReadFile(keyPath)
+	privateBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %w", err)
 	}
@@ -325,7 +326,7 @@ func loadPrivateKey(keyPath string) (ssh.Signer, error) {
 // the public key of a received connection
 // with the entries in the authorized_keys file.
 func loadAuthorizedKeys(authorizedKeysPath string) (authorizedKeysMap map[string]struct{}, err error) {
-	authorizedKeysBytes, err := os.ReadFile(authorizedKeysPath)
+	authorizedKeysBytes, err := ioutil.ReadFile(authorizedKeysPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load authorized keys: %w", err)
 	}
@@ -368,7 +369,7 @@ func makeRSASSHKeyPair(bits int, pubKeyPath, privateKeyPath string) (err error) 
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
+	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
 }
 
 // makeECDSASSHKeyPair make a pair of public and private keys for ECDSA SSH access.
@@ -400,7 +401,7 @@ func makeECDSASSHKeyPair(pubKeyPath, privateKeyPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
+	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
 }
 
 // makeEd25519SSHKeyPair make a pair of public and private keys for Ed25519 SSH access.
@@ -432,5 +433,5 @@ func makeEd25519SSHKeyPair(pubKeyPath, privateKeyPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
+	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0644)
 }

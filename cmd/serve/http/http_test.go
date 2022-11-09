@@ -3,9 +3,8 @@ package http
 import (
 	"context"
 	"flag"
-	"io"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -92,10 +91,10 @@ func TestInit(t *testing.T) {
 func checkGolden(t *testing.T, fileName string, got []byte) {
 	if *updateGolden {
 		t.Logf("Updating golden file %q", fileName)
-		err := os.WriteFile(fileName, got, 0666)
+		err := ioutil.WriteFile(fileName, got, 0666)
 		require.NoError(t, err)
 	} else {
-		want, err := os.ReadFile(fileName)
+		want, err := ioutil.ReadFile(fileName)
 		require.NoError(t, err)
 		wants := strings.Split(string(want), "\n")
 		gots := strings.Split(string(got), "\n")
@@ -211,7 +210,7 @@ func TestGET(t *testing.T) {
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		assert.Equal(t, test.Status, resp.StatusCode, test.Golden)
-		body, err := io.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
 
 		// Check we got a Last-Modified header and that it is a valid date

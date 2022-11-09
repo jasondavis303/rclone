@@ -4,7 +4,7 @@ package version
 import (
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -95,7 +95,7 @@ func GetVersion(url string) (v *semver.Version, vs string, date time.Time, err e
 	if resp.StatusCode != http.StatusOK {
 		return v, vs, date, errors.New(resp.Status)
 	}
-	bodyBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return v, vs, date, err
 	}

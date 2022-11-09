@@ -5,6 +5,7 @@ package selfupdate
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +86,7 @@ func TestInstallOnLinux(t *testing.T) {
 	assert.NoError(t, InstallUpdate(ctx, &Options{Beta: true, Output: path, Version: fs.Version}))
 
 	// Must fail on non-writable file
-	assert.NoError(t, os.WriteFile(path, []byte("test"), 0644))
+	assert.NoError(t, ioutil.WriteFile(path, []byte("test"), 0644))
 	assert.NoError(t, os.Chmod(path, 0000))
 	err = (InstallUpdate(ctx, &Options{Beta: true, Output: path}))
 	assert.Error(t, err)
@@ -100,7 +101,7 @@ func TestInstallOnLinux(t *testing.T) {
 	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
 
 	// Must remove temporary files
-	files, err := os.ReadDir(testDir)
+	files, err := ioutil.ReadDir(testDir)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 
@@ -140,7 +141,7 @@ func TestRenameOnWindows(t *testing.T) {
 	// Must not create temporary files when target doesn't exist
 	assert.NoError(t, InstallUpdate(ctx, &Options{Beta: true, Output: path}))
 
-	files, err := os.ReadDir(testDir)
+	files, err := ioutil.ReadDir(testDir)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 
@@ -151,7 +152,7 @@ func TestRenameOnWindows(t *testing.T) {
 	assert.NoError(t, cmdWait.Start())
 
 	assert.NoError(t, InstallUpdate(ctx, &Options{Beta: false, Output: path}))
-	files, err = os.ReadDir(testDir)
+	files, err = ioutil.ReadDir(testDir)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(files))
 
@@ -188,7 +189,7 @@ func TestRenameOnWindows(t *testing.T) {
 
 	// Updating when the "old" executable is running must produce a random "old" file
 	assert.NoError(t, InstallUpdate(ctx, &Options{Beta: true, Output: path}))
-	files, err = os.ReadDir(testDir)
+	files, err = ioutil.ReadDir(testDir)
 	assert.NoError(t, err)
 	assert.Equal(t, 3, len(files))
 

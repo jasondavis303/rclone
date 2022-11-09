@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -197,7 +198,7 @@ func (opt *Options) applyFilters(ctx context.Context) (context.Context, error) {
 	_ = f.Close()
 
 	hashFile := filtersFile + ".md5"
-	wantHash, err := os.ReadFile(hashFile)
+	wantHash, err := ioutil.ReadFile(hashFile)
 	if err != nil && !opt.Resync {
 		return ctx, fmt.Errorf("filters file md5 hash not found (must run --resync): %s", filtersFile)
 	}
@@ -208,7 +209,7 @@ func (opt *Options) applyFilters(ctx context.Context) (context.Context, error) {
 
 	if opt.Resync {
 		fs.Infof(nil, "Storing filters file hash to %s", hashFile)
-		if err := os.WriteFile(hashFile, []byte(gotHash), bilib.PermSecure); err != nil {
+		if err := ioutil.WriteFile(hashFile, []byte(gotHash), bilib.PermSecure); err != nil {
 			return ctx, err
 		}
 	}

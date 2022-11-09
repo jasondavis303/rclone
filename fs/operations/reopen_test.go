@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/rclone/rclone/fs"
@@ -82,7 +83,7 @@ func TestReOpen(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Check contents read correctly
-				got, err := io.ReadAll(h)
+				got, err := ioutil.ReadAll(h)
 				assert.NoError(t, err)
 				assert.Equal(t, expectedRead, got)
 
@@ -117,7 +118,7 @@ func TestReOpen(t *testing.T) {
 				assert.NoError(t, err)
 
 				// check contents
-				got, err := io.ReadAll(h)
+				got, err := ioutil.ReadAll(h)
 				assert.NoError(t, err)
 				assert.Equal(t, expectedRead, got)
 
@@ -131,7 +132,7 @@ func TestReOpen(t *testing.T) {
 				assert.NoError(t, err)
 
 				// check contents
-				got, err := io.ReadAll(h)
+				got, err := ioutil.ReadAll(h)
 				assert.Equal(t, errorTestError, err)
 				assert.Equal(t, expectedRead[:6], got)
 

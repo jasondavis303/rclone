@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -632,7 +633,7 @@ func (f *Fs) download(ctx context.Context, url string, size int64, options ...fs
 		})
 		if start > 0 {
 			// We need to read and discard the beginning of the data...
-			_, err = io.CopyN(io.Discard, resp.Body, start)
+			_, err = io.CopyN(ioutil.Discard, resp.Body, start)
 			if err != nil {
 				return nil, err
 			}

@@ -3,6 +3,7 @@ package fspath
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -423,7 +424,7 @@ func TestParse(t *testing.T) {
 		if *makeCorpus {
 			// write the test corpus for fuzzing
 			require.NoError(t, os.MkdirAll("corpus", 0777))
-			require.NoError(t, os.WriteFile(fmt.Sprintf("corpus/%02d", testNumber), []byte(test.in), 0666))
+			require.NoError(t, ioutil.WriteFile(fmt.Sprintf("corpus/%02d", testNumber), []byte(test.in), 0666))
 		}
 
 	}

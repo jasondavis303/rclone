@@ -5,6 +5,7 @@ package bilib
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -105,7 +106,7 @@ func CopyDir(src string, dst string) (err error) {
 		return
 	}
 
-	entries, err := os.ReadDir(src)
+	entries, err := ioutil.ReadDir(src)
 	if err != nil {
 		return
 	}
@@ -121,7 +122,7 @@ func CopyDir(src string, dst string) (err error) {
 			}
 		} else {
 			// Skip symlinks.
-			if entry.Type()&os.ModeSymlink != 0 {
+			if entry.Mode()&os.ModeSymlink != 0 {
 				continue
 			}
 

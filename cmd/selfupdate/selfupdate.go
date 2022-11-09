@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -226,7 +227,7 @@ func InstallUpdate(ctx context.Context, opt *Options) error {
 }
 
 func installPackage(ctx context.Context, beta bool, version, siteURL, packageFormat string) error {
-	tempFile, err := os.CreateTemp("", "rclone.*."+packageFormat)
+	tempFile, err := ioutil.TempFile("", "rclone.*."+packageFormat)
 	if err != nil {
 		return fmt.Errorf("unable to write temporary package: %w", err)
 	}
@@ -356,7 +357,7 @@ func downloadUpdate(ctx context.Context, beta bool, version, siteURL, newFile, p
 	}
 
 	if packageFormat == "deb" || packageFormat == "rpm" {
-		if err := os.WriteFile(newFile, archiveBuf, 0644); err != nil {
+		if err := ioutil.WriteFile(newFile, archiveBuf, 0644); err != nil {
 			return fmt.Errorf("cannot write temporary .%s: %w", packageFormat, err)
 		}
 		return nil
@@ -470,5 +471,5 @@ func downloadFile(ctx context.Context, url string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed with %s downloading %s", resp.Status, url)
 	}
-	return io.ReadAll(resp.Body)
+	return ioutil.ReadAll(resp.Body)
 }

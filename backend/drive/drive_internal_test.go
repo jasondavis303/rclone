@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime"
 	"os"
 	"path"
@@ -77,7 +78,7 @@ var additionalMimeTypes = map[string]string{
 // Load the example export formats into exportFormats for testing
 func TestInternalLoadExampleFormats(t *testing.T) {
 	fetchFormatsOnce.Do(func() {})
-	buf, err := os.ReadFile(filepath.FromSlash("test/about.json"))
+	buf, err := ioutil.ReadFile(filepath.FromSlash("test/about.json"))
 	var about struct {
 		ExportFormats map[string][]string `json:"exportFormats,omitempty"`
 		ImportFormats map[string][]string `json:"importFormats,omitempty"`

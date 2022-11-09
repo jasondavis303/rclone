@@ -3,6 +3,7 @@ package gendocs
 
 import (
 	"bytes"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -70,7 +71,7 @@ rclone.org website.`,
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(filepath.Join(root, "flags.md"), buf.Bytes(), 0777)
+		err = ioutil.WriteFile(filepath.Join(root, "flags.md"), buf.Bytes(), 0777)
 		if err != nil {
 			return err
 		}
@@ -128,7 +129,7 @@ rclone.org website.`,
 				return err
 			}
 			if !info.IsDir() {
-				b, err := os.ReadFile(path)
+				b, err := ioutil.ReadFile(path)
 				if err != nil {
 					return err
 				}
@@ -139,7 +140,7 @@ See the [global flags page](/flags/) for global options not listed here.
 ### SEE ALSO`, 1)
 				// outdent all the titles by one
 				doc = outdentTitle.ReplaceAllString(doc, `$1`)
-				err = os.WriteFile(path, []byte(doc), 0777)
+				err = ioutil.WriteFile(path, []byte(doc), 0777)
 				if err != nil {
 					return err
 				}

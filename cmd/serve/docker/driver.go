@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -328,7 +329,7 @@ func (drv *Driver) saveState() error {
 	ctx := context.Background()
 	retries := fs.GetConfig(ctx).LowLevelRetries
 	for i := 0; i <= retries; i++ {
-		err = os.WriteFile(drv.statePath, data, 0600)
+		err = ioutil.WriteFile(drv.statePath, data, 0600)
 		if err == nil {
 			return nil
 		}
@@ -341,7 +342,7 @@ func (drv *Driver) saveState() error {
 func (drv *Driver) restoreState(ctx context.Context) error {
 	fs.Debugf(nil, "Restore state from %s", drv.statePath)
 
-	data, err := os.ReadFile(drv.statePath)
+	data, err := ioutil.ReadFile(drv.statePath)
 	if os.IsNotExist(err) {
 		return nil
 	}

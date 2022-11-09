@@ -7,8 +7,7 @@ package data
 import (
 	"fmt"
 	"html/template"
-	"io"
-	"os"
+	"io/ioutil"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -71,7 +70,7 @@ func GetTemplate(tmpl string) (tpl *template.Template, err error) {
 
 		defer fs.CheckClose(templateFile, &err)
 
-		templateBytes, err := io.ReadAll(templateFile)
+		templateBytes, err := ioutil.ReadAll(templateFile)
 		if err != nil {
 			return nil, fmt.Errorf("get template read: %w", err)
 		}
@@ -79,7 +78,7 @@ func GetTemplate(tmpl string) (tpl *template.Template, err error) {
 		templateString = string(templateBytes)
 
 	} else {
-		templateFile, err := os.ReadFile(tmpl)
+		templateFile, err := ioutil.ReadFile(tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("get template open: %w", err)
 		}

@@ -29,6 +29,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -98,7 +99,7 @@ func newRun() *Run {
 		r.Fatalf("Failed to open remote %q: %v", *RemoteName, err)
 	}
 
-	r.LocalName, err = os.MkdirTemp("", "rclone")
+	r.LocalName, err = ioutil.TempDir("", "rclone")
 	if err != nil {
 		r.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -220,7 +221,7 @@ func (r *Run) WriteFile(filePath, content string, t time.Time) Item {
 	if err != nil {
 		r.Fatalf("Failed to make directories %q: %v", dirPath, err)
 	}
-	err = os.WriteFile(filePath, []byte(content), 0600)
+	err = ioutil.WriteFile(filePath, []byte(content), 0600)
 	if err != nil {
 		r.Fatalf("Failed to write file %q: %v", filePath, err)
 	}

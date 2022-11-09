@@ -3,6 +3,7 @@ package downloaders
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"sync"
 	"testing"
 	"time"
@@ -84,7 +85,7 @@ func TestDownloaders(t *testing.T) {
 	)
 
 	// Write the test file
-	in := io.NopCloser(readers.NewPatternReader(size))
+	in := ioutil.NopCloser(readers.NewPatternReader(size))
 	src, err := operations.RcatSize(ctx, r.Fremote, remote, in, size, time.Now())
 	require.NoError(t, err)
 	assert.Equal(t, size, src.Size())

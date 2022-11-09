@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -24,8 +25,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -1538,11 +1537,7 @@ This ACL is used for creating objects and if bucket_acl isn't set, for creating 
 For more info visit https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
 
 Note that this ACL is applied when server-side copying objects as S3
-doesn't copy the ACL from the source but rather writes a fresh one.
-
-If the acl is an empty string then no X-Amz-Acl: header is added and
-the default (private) will be used.
-`,
+doesn't copy the ACL from the source but rather writes a fresh one.`,
 			Provider: "!Storj,Cloudflare",
 			Examples: []fs.OptionExample{{
 				Value:    "default",
@@ -1596,11 +1591,7 @@ the default (private) will be used.
 For more info visit https://docs.aws.amazon.com/AmazonS3/latest/dev/acl-overview.html#canned-acl
 
 Note that this ACL is applied when only when creating buckets.  If it
-isn't set then "acl" is used instead.
-
-If the "acl" and "bucket_acl" are empty strings then no X-Amz-Acl:
-header is added and the default (private) will be used.
-`,
+isn't set then "acl" is used instead.`,
 			Advanced: true,
 			Examples: []fs.OptionExample{{
 				Value: "private",
@@ -2174,31 +2165,6 @@ can't check the size and hash but the file contents will be decompressed.
 			Advanced: true,
 			Default:  false,
 		}, {
-			Name: "might_gzip",
-			Help: strings.ReplaceAll(`Set this if the backend might gzip objects.
-
-Normally providers will not alter objects when they are downloaded. If
-an object was not uploaded with |Content-Encoding: gzip| then it won't
-be set on download.
-
-However some providers may gzip objects even if they weren't uploaded
-with |Content-Encoding: gzip| (eg Cloudflare).
-
-A symptom of this would be receiving errors like
-
-    ERROR corrupted on transfer: sizes differ NNN vs MMM
-
-If you set this flag and rclone downloads an object with
-Content-Encoding: gzip set and chunked transfer encoding, then rclone
-will decompress the object on the fly.
-
-If this is set to unset (the default) then rclone will choose
-according to the provider setting what to apply, but you can override
-rclone's choice here.
-`, "|", "`"),
-			Default:  fs.Tristate{},
-			Advanced: true,
-		}, {
 			Name:     "no_system_metadata",
 			Help:     `Suppress setting and reading of system metadata`,
 			Advanced: true,
@@ -2329,7 +2295,6 @@ type Options struct {
 	Versions              bool                 `config:"versions"`
 	VersionAt             fs.Time              `config:"version_at"`
 	Decompress            bool                 `config:"decompress"`
-	MightGzip             fs.Tristate          `config:"might_gzip"`
 	NoSystemMetadata      bool                 `config:"no_system_metadata"`
 }
 
@@ -2690,12 +2655,10 @@ func setQuirks(opt *Options) {
 		virtualHostStyle  = true
 		urlEncodeListings = true
 		useMultipartEtag  = true
-		mightGzip         = true // assume all providers might gzip until proven otherwise
 	)
 	switch opt.Provider {
 	case "AWS":
 		// No quirks
-		mightGzip = false // Never auto gzips objects
 	case "Alibaba":
 		useMultipartEtag = false // Alibaba seems to calculate multipart Etags differently from AWS
 	case "HuaweiOBS":
@@ -2809,26 +2772,12 @@ func setQuirks(opt *Options) {
 		opt.UseMultipartEtag.Valid = true
 		opt.UseMultipartEtag.Value = useMultipartEtag
 	}
-
-	// set MightGzip if not manually set
-	if !opt.MightGzip.Valid {
-		opt.MightGzip.Valid = true
-		opt.MightGzip.Value = mightGzip
-	}
 }
 
 // setRoot changes the root of the Fs
 func (f *Fs) setRoot(root string) {
 	f.root = parsePath(root)
 	f.rootBucket, f.rootDirectory = bucket.Split(f.root)
-}
-
-// return a pointer to the string if non empty or nil if it is empty
-func stringPointerOrNil(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
 }
 
 // NewFs constructs an Fs from the path, bucket:path
@@ -2849,6 +2798,9 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 	}
 	if opt.Versions && opt.VersionAt.IsSet() {
 		return nil, errors.New("s3: cant use --s3-versions and --s3-version-at at the same time")
+	}
+	if opt.ACL == "" {
+		opt.ACL = "private"
 	}
 	if opt.BucketACL == "" {
 		opt.BucketACL = opt.ACL
@@ -2937,6 +2889,7 @@ func NewFs(ctx context.Context, name, root string, m configmap.Mapper) (fs.Fs, e
 		return f, fs.ErrorIsFile
 	}
 	if opt.Provider == "Storj" {
+		f.features.Copy = nil
 		f.features.SetTier = false
 		f.features.GetTier = false
 	}
@@ -3039,13 +2992,19 @@ func (f *Fs) NewObject(ctx context.Context, remote string) (fs.Object, error) {
 
 // Gets the bucket location
 func (f *Fs) getBucketLocation(ctx context.Context, bucket string) (string, error) {
-	region, err := s3manager.GetBucketRegion(ctx, f.ses, bucket, "", func(r *request.Request) {
-		r.Config.S3ForcePathStyle = aws.Bool(f.opt.ForcePathStyle)
+	req := s3.GetBucketLocationInput{
+		Bucket: &bucket,
+	}
+	var resp *s3.GetBucketLocationOutput
+	var err error
+	err = f.pacer.Call(func() (bool, error) {
+		resp, err = f.c.GetBucketLocation(&req)
+		return f.shouldRetry(ctx, err)
 	})
 	if err != nil {
 		return "", err
 	}
-	return region, nil
+	return s3.NormalizeBucketLocation(aws.StringValue(resp.LocationConstraint)), nil
 }
 
 // Updates the region for the bucket by reading the region from the
@@ -3717,7 +3676,7 @@ func (f *Fs) makeBucket(ctx context.Context, bucket string) error {
 	return f.cache.Create(bucket, func() error {
 		req := s3.CreateBucketInput{
 			Bucket: &bucket,
-			ACL:    stringPointerOrNil(f.opt.BucketACL),
+			ACL:    &f.opt.BucketACL,
 		}
 		if f.opt.LocationConstraint != "" {
 			req.CreateBucketConfiguration = &s3.CreateBucketConfiguration{
@@ -3782,7 +3741,7 @@ func pathEscape(s string) string {
 // method
 func (f *Fs) copy(ctx context.Context, req *s3.CopyObjectInput, dstBucket, dstPath, srcBucket, srcPath string, src *Object) error {
 	req.Bucket = &dstBucket
-	req.ACL = stringPointerOrNil(f.opt.ACL)
+	req.ACL = &f.opt.ACL
 	req.Key = &dstPath
 	source := pathEscape(path.Join(srcBucket, srcPath))
 	if src.versionID != nil {
@@ -4760,12 +4719,23 @@ func (o *Object) downloadFromURL(ctx context.Context, bucketPath string, options
 		return nil, err
 	}
 
-	contentLength := rest.ParseSizeFromHeaders(resp.Header)
-	if contentLength < 0 {
-		fs.Debugf(o, "Failed to parse file size from headers")
+	contentLength := &resp.ContentLength
+	if resp.Header.Get("Content-Range") != "" {
+		var contentRange = resp.Header.Get("Content-Range")
+		slash := strings.IndexRune(contentRange, '/')
+		if slash >= 0 {
+			i, err := strconv.ParseInt(contentRange[slash+1:], 10, 64)
+			if err == nil {
+				contentLength = &i
+			} else {
+				fs.Debugf(o, "Failed to find parse integer from in %q: %v", contentRange, err)
+			}
+		} else {
+			fs.Debugf(o, "Failed to find length in %q", contentRange)
+		}
 	}
 
-	lastModified, err := http.ParseTime(resp.Header.Get("Last-Modified"))
+	lastModified, err := time.Parse(time.RFC1123, resp.Header.Get("Last-Modified"))
 	if err != nil {
 		fs.Debugf(o, "Failed to parse last modified from string %s, %v", resp.Header.Get("Last-Modified"), err)
 	}
@@ -4789,7 +4759,7 @@ func (o *Object) downloadFromURL(ctx context.Context, bucketPath string, options
 
 	var head = s3.HeadObjectOutput{
 		ETag:               header("Etag"),
-		ContentLength:      &contentLength,
+		ContentLength:      contentLength,
 		LastModified:       &lastModified,
 		Metadata:           metaData,
 		CacheControl:       header("Cache-Control"),
@@ -4888,7 +4858,7 @@ func (o *Object) Open(ctx context.Context, options ...fs.OpenOption) (in io.Read
 
 	// Decompress body if necessary
 	if aws.StringValue(resp.ContentEncoding) == "gzip" {
-		if o.fs.opt.Decompress || (resp.ContentLength == nil && o.fs.opt.MightGzip.Value) {
+		if o.fs.opt.Decompress {
 			return readers.NewGzipReader(resp.Body)
 		}
 		o.fs.warnCompressed.Do(func() {
@@ -5135,7 +5105,7 @@ func (o *Object) uploadSinglepartPutObject(ctx context.Context, req *s3.PutObjec
 		// Can't upload zero length files like this for some reason
 		r.Body = bytes.NewReader([]byte{})
 	} else {
-		r.SetStreamingBody(io.NopCloser(in))
+		r.SetStreamingBody(ioutil.NopCloser(in))
 	}
 	r.SetContext(ctx)
 	r.HTTPRequest.Header.Set("X-Amz-Content-Sha256", "UNSIGNED-PAYLOAD")
@@ -5249,7 +5219,7 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
 
 	req := s3.PutObjectInput{
 		Bucket: &bucket,
-		ACL:    stringPointerOrNil(o.fs.opt.ACL),
+		ACL:    &o.fs.opt.ACL,
 		Key:    &bucketPath,
 	}
 

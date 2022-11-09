@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -821,7 +822,7 @@ func (f *Fs) allocatePathRaw(file string, absolute bool) string {
 func grantTypeFilter(req *http.Request) {
 	if legacyTokenURL == req.URL.String() {
 		// read the entire body
-		refreshBody, err := io.ReadAll(req.Body)
+		refreshBody, err := ioutil.ReadAll(req.Body)
 		if err != nil {
 			return
 		}
@@ -831,7 +832,7 @@ func grantTypeFilter(req *http.Request) {
 		refreshBody = []byte(strings.Replace(string(refreshBody), "grant_type=refresh_token", "grant_type=REFRESH_TOKEN", 1))
 
 		// set the new ReadCloser (with a dummy Close())
-		req.Body = io.NopCloser(bytes.NewReader(refreshBody))
+		req.Body = ioutil.NopCloser(bytes.NewReader(refreshBody))
 	}
 }
 
@@ -1788,7 +1789,7 @@ func readMD5(in io.Reader, size, threshold int64) (md5sum string, out io.Reader,
 		var tempFile *os.File
 
 		// create the cache file
-		tempFile, err = os.CreateTemp("", cachePrefix)
+		tempFile, err = ioutil.TempFile("", cachePrefix)
 		if err != nil {
 			return
 		}
@@ -1816,7 +1817,7 @@ func readMD5(in io.Reader, size, threshold int64) (md5sum string, out io.Reader,
 	} else {
 		// that's a small file, just read it into memory
 		var inData []byte
-		inData, err = io.ReadAll(teeReader)
+		inData, err = ioutil.ReadAll(teeReader)
 		if err != nil {
 			return
 		}
@@ -1913,7 +1914,7 @@ func (o *Object) Update(ctx context.Context, in io.Reader, src fs.ObjectInfo, op
 
 		// copy the already uploaded bytes into the trash :)
 		var result api.UploadResponse
-		_, err = io.CopyN(io.Discard, in, response.ResumePos)
+		_, err = io.CopyN(ioutil.Discard, in, response.ResumePos)
 		if err != nil {
 			return err
 		}

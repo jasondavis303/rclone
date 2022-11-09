@@ -11,6 +11,7 @@ import (
 	goflag "flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -166,7 +167,7 @@ func TestInternalVfsCache(t *testing.T) {
 			li2 := [2]string{path.Join("test", "one"), path.Join("test", "second")}
 			for _, r := range li2 {
 				var err error
-				ci, err := os.ReadDir(path.Join(runInstance.chunkPath, runInstance.encryptRemoteIfNeeded(t, path.Join(id, r))))
+				ci, err := ioutil.ReadDir(path.Join(runInstance.chunkPath, runInstance.encryptRemoteIfNeeded(t, path.Join(id, r))))
 				if err != nil || len(ci) == 0 {
 					log.Printf("========== '%v' not in cache", r)
 				} else {
@@ -840,7 +841,7 @@ func newRun() *run {
 	}
 
 	if uploadDir == "" {
-		r.tmpUploadDir, err = os.MkdirTemp("", "rclonecache-tmp")
+		r.tmpUploadDir, err = ioutil.TempDir("", "rclonecache-tmp")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to create temp dir: %v", err))
 		}
@@ -983,7 +984,7 @@ func (r *run) randomReader(t *testing.T, size int64) io.ReadCloser {
 	chunk := int64(1024)
 	cnt := size / chunk
 	left := size % chunk
-	f, err := os.CreateTemp("", "rclonecache-tempfile")
+	f, err := ioutil.TempFile("", "rclonecache-tempfile")
 	require.NoError(t, err)
 
 	for i := 0; i < int(cnt); i++ {
